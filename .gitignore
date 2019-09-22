@@ -1,0 +1,7 @@
+# globs
+Makefile.in
+*.DS_Store
+*.tar.gz
+*.zip
+
+.vscode/
