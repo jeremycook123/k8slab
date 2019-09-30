@@ -20,19 +20,18 @@ Parameters:
   EC2InstanceType:
     Description: EC2 instance type for the SSH Lab Mgmt instance
     Type: String
-    Default: t3.xlarge
+    Default: t3.large
     AllowedValues:
-      - t2.micro
-      - t2.small
       - t3.micro
       - t3.small
-      - t3.xlarge
+      - t3.large
+      - m5.xlarge
     ConstraintDescription: Must be a valid EC2 instance type
 
   EC2ImageId:
     Type: AWS::EC2::Image::Id
-    Default: ami-04b762b4289fba92b
-    Description: Amazon Linux 2
+    Default: ami-002a44ed6b66f179e
+    Description: CloudAcademy Docker AMI id - base on Amazon Linux 2
 
 Resources:
   EC2SecurityGroup:
@@ -151,33 +150,58 @@ Resources:
             echo starting v1.04...
             whoami
 
-            curl -Lo minikube https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-            chmod +x minikube
-            cp minikube /usr/local/bin && rm minikube
-
-            sudo minikube start --vm-driver=none --network-plugin=cni
-
-            until IP=`sudo minikube ip`
-            do
-                sleep 10
-                echo trying again...
-            done
-
             mkdir -p /cloudacademy/lab
-            cd /cloudacademy/lab
-
-            cp /root/.minikube/ca.crt .
-            cp /root/.minikube/client.crt .
-            cp /root/.minikube/client.key .
-
+            cd /cloudacademy/lab            
             curl -sL https://api.github.com/repos/cloudacademy/k8s-lab-cilium/releases/latest | jq -r '.assets[].browser_download_url' | wget -qi -
             unzip *.zip
-
             chown -R ec2-user:ec2-user /cloudacademy
 
             echo starting docker IDE containers...
             docker run --name socat -d --restart=always -p 127.0.0.1:2376:2375 -v /var/run/docker.sock:/var/run/docker.sock alpine/socat tcp-listen:2375,fork,reuseaddr unix-connect:/var/run/docker.sock
             docker run --link socat:socat --env DOCKER_HOST=tcp://socat:2375 --privileged --name ide -dit --restart unless-stopped -p 3000:3000 -v "/cloudacademy/lab:/home/project:cached" cloudacademydevops/ide:minikube
+
+            echo cp certs!!
+            docker exec ide mkdir /home/theia/.kube
+            docker cp /root/.minikube/ca.crt ide:/home/theia/.kube/
+            docker cp /root/.minikube/client.crt ide:/home/theia/.kube/
+            docker cp /root/.minikube/client.key ide:/home/theia/.kube/
+            docker exec ide sudo chown -R theia:theia /home/theia/.kube/
+
+            echo requesting ip...
+            until IP=`sudo minikube ip`
+            do
+              sleep 10
+              echo trying again...
+            done
+
+            echo minikube $IP
+
+            cat > /tmp/config << EOF
+            apiVersion: v1
+            clusters:
+            * cluster:
+                certificate-authority: ca.crt
+                server: https://$IP:8443
+              name: minikube
+            contexts:
+            * context:
+                cluster: minikube
+                user: minikube
+              name: minikube
+            current-context: minikube
+            kind: Config
+            preferences: {}
+            users:
+            * name: minikube
+              user:
+                client-certificate: client.crt
+                client-key: client.key
+            EOF
+
+            sed -i 's/*/-/g' /tmp/config
+
+            docker cp /tmp/config ide:/home/theia/.kube/
+            docker exec ide sudo chown -R theia:theia /home/theia/.kube/
 
             echo finished!!
       Tags:
