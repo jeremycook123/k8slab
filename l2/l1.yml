@@ -1,0 +1,218 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Cloud Academy IDE Lab Platform - Kubernetes Minikube Cluster"
+
+Parameters:
+  VpcId:
+    Type: String
+    Default: "{VpcId}"
+    Description: The ID of the default VPC.
+
+  SubnetId:
+    Type: String
+    Default: "{SubnetIdA}"
+    Description: The ID of the first subnet in the default VPC
+
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instances
+    Default: "{KeyName}"
+    Type: AWS::EC2::KeyPair::KeyName
+
+  EC2InstanceType:
+    Description: EC2 instance type for the SSH Lab Mgmt instance
+    Type: String
+    Default: t3.large
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.large
+      - m5.xlarge
+    ConstraintDescription: Must be a valid EC2 instance type
+
+  EC2ImageId:
+    Type: AWS::EC2::Image::Id
+    Default: ami-002a44ed6b66f179e
+    Description: CloudAcademy Docker AMI id - base on Amazon Linux 2
+
+Resources:
+  EC2SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Cluster communication with worker nodes
+      VpcId: !Ref VpcId
+
+  EC2SecurityGroupSSHIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroup
+    Properties:
+      GroupId: !Ref EC2SecurityGroup
+      Description: Allow 22 inbound SSH from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+
+  EC2SecurityGroupK8sServicePortRangeIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroup
+    Properties:
+      GroupId: !Ref EC2SecurityGroup
+      Description: Allow 30000-32767 inbound - K8sServicePortRange from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 30000
+      ToPort: 32767
+
+  EC2SecurityGroup3000Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroup
+    Properties:
+      GroupId: !Ref EC2SecurityGroup
+      Description: Allow 3000 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 3000
+      ToPort: 3000
+
+  EC2SecurityGroup80Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroup
+    Properties:
+      GroupId: !Ref EC2SecurityGroup
+      Description: Allow 80 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+
+  EC2SecurityGroup443Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroup
+    Properties:
+      GroupId: !Ref EC2SecurityGroup
+      Description: Allow 443 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+
+  EC2SecurityGroup8070Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroup
+    Properties:
+      GroupId: !Ref EC2SecurityGroup
+      Description: Allow 8070 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 8070
+      ToPort: 8070
+
+  EC2SecurityGroup8080Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroup
+    Properties:
+      GroupId: !Ref EC2SecurityGroup
+      Description: Allow 8080 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 8080
+      ToPort: 8080
+
+  EC2SecurityGroup8090Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroup
+    Properties:
+      GroupId: !Ref EC2SecurityGroup
+      Description: Allow 8090 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 8090
+      ToPort: 8090
+
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      InstanceType:
+        Ref: EC2InstanceType
+      KeyName:
+        Ref: KeyName
+      ImageId:
+        Ref: EC2ImageId
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet:
+            - Ref: EC2SecurityGroup
+          SubnetId:
+            Ref: SubnetId
+      UserData:
+        Fn::Base64: !Sub |
+            #!/bin/bash
+            echo starting v1.04...
+            whoami
+
+            mkdir -p /cloudacademy/lab
+            cd /cloudacademy/lab            
+            curl -sL https://api.github.com/repos/cloudacademy/k8s-lab-ingress/releases/latest | jq -r '.assets[].browser_download_url' | wget -qi -
+            unzip *.zip
+            chown -R ec2-user:ec2-user /cloudacademy
+
+            echo starting docker IDE containers...
+            docker run --name socat -d --restart=always -p 127.0.0.1:2376:2375 -v /var/run/docker.sock:/var/run/docker.sock alpine/socat tcp-listen:2375,fork,reuseaddr unix-connect:/var/run/docker.sock
+            docker run --link socat:socat --env DOCKER_HOST=tcp://socat:2375 --privileged --name ide -dit --restart unless-stopped -p 3000:3000 -v "/cloudacademy/lab:/home/project:cached" cloudacademydevops/ide:minikube
+
+            echo cp certs!!
+            docker exec ide mkdir /home/theia/.kube
+            docker cp /root/.minikube/ca.crt ide:/home/theia/.kube/
+            docker cp /root/.minikube/client.crt ide:/home/theia/.kube/
+            docker cp /root/.minikube/client.key ide:/home/theia/.kube/
+            docker exec ide sudo chown -R theia:theia /home/theia/.kube/
+
+            echo requesting ip...
+            until IP=`sudo minikube ip`
+            do
+              sleep 10
+              echo trying again...
+            done
+
+            echo minikube $IP
+
+            cat > /tmp/config << EOF
+            apiVersion: v1
+            clusters:
+            * cluster:
+                certificate-authority: ca.crt
+                server: https://$IP:8443
+              name: minikube
+            contexts:
+            * context:
+                cluster: minikube
+                user: minikube
+              name: minikube
+            current-context: minikube
+            kind: Config
+            preferences: {}
+            users:
+            * name: minikube
+              user:
+                client-certificate: client.crt
+                client-key: client.key
+            EOF
+
+            sed -i 's/*/-/g' /tmp/config
+
+            docker cp /tmp/config ide:/home/theia/.kube/
+            docker exec ide sudo chown -R theia:theia /home/theia/.kube/
+
+            echo finished!!
+      Tags:
+        - Key: Name
+          Value: k8s.cluster.cloudacademy.platform.instance
+
+Outputs:
+  SubnetId:
+    Description: Subnet used in the VPC
+    Value: !Join [",", [!Ref SubnetId]]
+
+  VpcId:
+    Description: The VPC Id
+    Value: !Ref VpcId
