@@ -1,0 +1,13 @@
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: webapp-ingress
+spec:
+  rules:
+  - host: staging.webapp.cloudacademy.PUBLICIP.nip.io
+    http:
+      paths:
+      - path: /
+        backend:
+          serviceName: webapp-svc
+          servicePort: 80
