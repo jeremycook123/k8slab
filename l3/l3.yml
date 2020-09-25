@@ -4,20 +4,20 @@ Description: "Cloud Academy IDE Lab Platform - Kustomize"
 Parameters:
   VpcId:
     Type: String
-    Default: "vpc-538b0236"
-    #Default: "{VpcId}"
+    #Default: "vpc-538b0236"
+    Default: "{VpcId}"
     Description: The ID of the default VPC
 
   SubnetId:
     Type: String
-    Default: "subnet-d0598389"
-    #Default: "{SubnetIdA}"
+    #Default: "subnet-d0598389"
+    Default: "{SubnetIdA}"
     Description: The ID of the first subnet in the default VPC
 
   KeyName:
     Description: The EC2 Key Pair to allow SSH access to the instances
-    Default: "Oregon2Icecream"
-    #Default: "{KeyName}"
+    #Default: "Oregon2Icecream"
+    Default: "{KeyName}"
     Type: AWS::EC2::KeyPair::KeyName
 
   EC2InstanceTypeIDE:
@@ -364,6 +364,9 @@ Resources:
               --env KUBECONFIG=/home/project/.kube/config.labcluster \
               --env K8S_CLUSTER_PUBLICIP=${EC2InstanceK8.PublicIp} \
               --env K8S_CLUSTER_PRIVATEIP=${EC2InstanceK8.PrivateIp} \
+              --env WEBAPP_URL_BASE=webapp.cloudacademy.${EC2InstanceK8.PublicIp}.nip.io \
+              --env WEBAPP_URL_STAGING=staging.webapp.cloudacademy.${EC2InstanceK8.PublicIp}.nip.io \
+              --env WEBAPP_URL_PROD=prod.webapp.cloudacademy.${EC2InstanceK8.PublicIp}.nip.io \
               --env DOCKER_HOST=tcp://socat:2375 \
               --privileged --name ide -dit --restart unless-stopped -p 80:3000 -v "/cloudacademy/lab:/home/project:cached" cloudacademydevops/ide:spinnaker
 
