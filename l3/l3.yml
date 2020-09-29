@@ -318,7 +318,7 @@ Resources:
             echo finished!!
       Tags:
         - Key: Name
-          Value: labcluster.k8s.cloudacademy.platform.instance
+          Value: k8s.cloudacademy.platform.instance
 
   EC2InstanceIDE:
     DependsOn: [EC2InstanceK8]
