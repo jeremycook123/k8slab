@@ -16,7 +16,7 @@ fi
 #================================
 #================================
 token=$GITHUB_TOKEN
-repo=cloudacademy/containers-lab-k8s2
+repo=cloudacademy/istio-lab
 #================================
 #================================
 

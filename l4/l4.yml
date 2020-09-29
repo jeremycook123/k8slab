@@ -398,6 +398,12 @@ Resources:
             cp yq_linux_amd64 /usr/bin/yq
             cp yq_linux_amd64 /usr/local/bin/yq
 
+            mkdir -p /cloudacademy/lab
+            cd /cloudacademy/lab
+            curl -sL https://api.github.com/repos/cloudacademy/istio-lab/releases/latest | jq -r '.assets[].browser_download_url' | wget -qi -
+            unzip *.zip
+            find . -type f -name '*.yaml' -exec sed -i 's/PUBLICIP/${EC2InstanceK8sCluster.PublicIp}/g' {} +
+
             mkdir -p /cloudacademy/lab/.kube
             cd /cloudacademy/lab/.kube
             curl -o config.k8s ${EC2InstanceK8sCluster.PrivateIp}:10000/config
