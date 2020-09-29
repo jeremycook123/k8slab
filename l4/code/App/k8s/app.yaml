@@ -1,38 +1,22 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: nginx-conf-v1
+  name: webapp-cfg-v1
   labels:
     version: v1
 data:
-  nginx.conf: |-
-    server {
-        listen 80;
-        server_name localhost;
-
-        location / {
-            return 200 'CloudAcademy.v1.0.0\n';
-            add_header Content-Type text/plain;
-        }
-    }
+  message: "CloudAcademy.v1.0.0"
+  bgcolor: "yellow"
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: nginx-conf-v2
+  name: webapp-cfg-v2
   labels:
-    version: v2
+    version: v1
 data:
-  nginx.conf: |-
-    server {
-        listen 80;
-        server_name localhost;
-
-        location / {
-            return 200 'CloudAcademy.v2.0.0\n';
-            add_header Content-Type text/plain;
-        }
-    }
+  message: "CloudAcademy.v2.0.0"
+  bgcolor: "cyan"
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -54,20 +38,23 @@ spec:
         version: v1
     spec:
       containers:
-      - name: nginx
-        image: nginx:1.13.7
+      - name: webapp
+        image: cloudacademydevops/webappecho:latest
         imagePullPolicy: IfNotPresent
+        command: ["/go/bin/demo"]
         ports:
-        - name: http
-          containerPort: 80
-        volumeMounts:
-        - name: nginx-proxy-config
-          mountPath: /etc/nginx/conf.d/default.conf
-          subPath: nginx.conf
-      volumes:
-      - name: nginx-proxy-config
-        configMap:
-          name: nginx-conf-v1
+        - containerPort: 80
+        env:
+        - name: MESSAGE
+          valueFrom:
+            configMapKeyRef:
+              name: webapp-cfg-v1
+              key: message
+        - name: BACKGROUND_COLOR
+          valueFrom:
+            configMapKeyRef:
+              name: webapp-cfg-v1
+              key: bgcolor
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -89,20 +76,23 @@ spec:
         version: v2
     spec:
       containers:
-      - name: nginx
-        image: nginx:1.13.7
+      - name: webapp
+        image: cloudacademydevops/webappecho:latest
         imagePullPolicy: IfNotPresent
+        command: ["/go/bin/demo"]
         ports:
-        - name: http
-          containerPort: 80
-        volumeMounts:
-        - name: nginx-proxy-config
-          mountPath: /etc/nginx/conf.d/default.conf
-          subPath: nginx.conf
-      volumes:
-      - name: nginx-proxy-config
-        configMap:
-          name: nginx-conf-v2
+        - containerPort: 80
+        env:
+        - name: MESSAGE
+          valueFrom:
+            configMapKeyRef:
+              name: webapp-cfg-v2
+              key: message
+        - name: BACKGROUND_COLOR
+          valueFrom:
+            configMapKeyRef:
+              name: webapp-cfg-v2
+              key: bgcolor
 ---
 apiVersion: v1
 kind: Service

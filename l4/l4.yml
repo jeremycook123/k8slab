@@ -334,8 +334,9 @@ Resources:
             echo nodes $NODES
 
             cd /tmp
-            curl -L https://istio.io/downloadIstio | sh -
-            mv istio-1.7.0/bin/istioctl /usr/bin
+            curl -OL https://github.com/istio/istio/releases/download/1.7.2/istio-1.7.2-linux-amd64.tar.gz
+            tar -xvf istio-1.7.2-linux-amd64.tar.gz
+            mv istio-1.7.2/bin/istioctl /usr/bin
 
             until INSTALL=`sudo istioctl install --set profile=default`
             do
