@@ -13,7 +13,7 @@ kind: ConfigMap
 metadata:
   name: webapp-cfg-v2
   labels:
-    version: v1
+    version: v2
 data:
   message: "CloudAcademy.v2.0.0"
   bgcolor: "cyan"
