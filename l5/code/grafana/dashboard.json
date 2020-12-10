@@ -582,7 +582,7 @@
         "steppedLine": false,
         "targets": [
           {
-            "expr": "rate(process_cpu_seconds_total{job=\"democloudinc-metrics8\"}[30s])*100",
+            "expr": "rate(process_cpu_seconds_total{job=\"app-metrics\"}[30s])*100",
             "format": "time_series",
             "interval": "",
             "intervalFactor": 1,
@@ -885,7 +885,7 @@
         "steppedLine": false,
         "targets": [
           {
-            "expr": "(node_memory_MemTotal_bytes{node=\"minikube\"}-node_memory_MemFree_bytes{node=\"minikube\"})/node_memory_MemTotal_bytes{node=\"minikube\"}*100",
+            "expr": "(node_memory_MemTotal_bytes-node_memory_MemFree_bytes)/node_memory_MemTotal_bytes*100",
             "interval": "",
             "legendFormat": "",
             "refId": "A"

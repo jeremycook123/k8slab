@@ -365,8 +365,7 @@ Resources:
               --env K8S_CLUSTER_PRIVATEIP=${EC2InstanceK8.PrivateIp} \
               --privileged --name ide -dit --restart unless-stopped -p 80:3000 -v "/cloudacademy/lab:/home/project:cached" cloudacademydevops/ide:helm3
 
-            docker exec ide mkdir /home/theia/.kube/
-            docker exec ide bash -c "kubectl config view --flatten > /home/theia/.kube/config"
+            docker exec ide bash -c "chmod g-rx,o-rx /home/project/.kube/config.labcluster"
 
             echo finished!!
       Tags:
