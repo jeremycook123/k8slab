@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pcounter-app
+  labels:
+    app: pcounter-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: pcounter-app
+  template:
+    metadata:
+      labels:
+        app: pcounter-app
+    spec:
+      containers:
+      - name: pcounter-app
+        image: cloudacademydevops/app-counter
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pcounter-service
+  labels:
+    app: pcounter-app
+  annotations:
+    prometheus.io/scrape: "true"
+    prometheus.io/path: /metrics
+    prometheus.io/port: "5000"
+spec:
+  ports:
+  - port: 5000
+    targetPort: 5000
+    protocol: TCP
+  selector:
+    app: pcounter-app
+  type: NodePort
