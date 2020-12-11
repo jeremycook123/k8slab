@@ -1,17 +1,18 @@
 import time
 import random
 import threading
-
 import requests
+import os
+
+apiurl = os.environ['API_URL']
 
 endpoints = ('one', 'two', 'three', 'four', 'error')
-
 
 def run():
     while True:
         try:
             target = random.choice(endpoints)
-            requests.get("http://pcounter-service:5000/%s" % target, timeout=1)
+            requests.get(f"{apiurl}/{target}", timeout=1)
 
         except:
             pass

@@ -4,6 +4,6 @@ ADD requirements.txt /tmp/requirements.txt
 
 RUN pip install -r /tmp/requirements.txt
 
-ADD app.py /var/server/app.py
+ADD api.py /var/server/api.py
 
-CMD python /var/server/app.py
+CMD python /var/server/api.py
