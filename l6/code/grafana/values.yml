@@ -23,7 +23,7 @@ datasources:
    datasources:
    - name: Prometheus
      type: prometheus
-     url: http://54.149.95.104:30900
+     url: http://PROMETHEUS_PUBLIC_IP:30900
      access: proxy
      isDefault: true
 dashboards:

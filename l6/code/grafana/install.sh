@@ -1,6 +1,8 @@
 echo installing grafana...
 helm repo add grafana https://grafana.github.io/helm-charts
 helm repo update
+
+sed -i "s/PROMETHEUS_PUBLIC_IP/$K8S_CLUSTER_PUBLICIP/g" /home/project/code/grafana/values.yml
 helm install grafana --namespace monitoring --values /home/project/code/grafana/values.yml grafana/grafana --version 6.1.14
 
 echo waiting for grafana deployment to complete...
