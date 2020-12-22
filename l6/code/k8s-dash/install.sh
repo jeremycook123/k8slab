@@ -8,7 +8,7 @@ kubectl apply -f /home/project/code/k8s-dash/kubernetes-dashboard-role.yaml
 kubectl apply -f /home/project/code/k8s-dash/kubernetes-dashboard-rolebinding.yaml
 
 echo exposing dashboard ui...
-kubectl expose deployment k8s-dashboard --type=NodePort --name=k8s-dashboard --port=30990 --target-port=9090 -n monitoring
-kubectl patch service k8s-dashboard -n monitoring -p '{"spec":{"ports":[{"nodePort": 30990, "port": 30990, "protocol": "TCP", "targetPort": 9090}]}}'
+kubectl expose deployment k8s-dashboard-kubernetes-dashboard --type=NodePort --name=k8s-dashboard --port=30990 --target-port=9090 -n monitoring
+kubectl patch service k8s-dashboard-kubernetes-dashboard -n monitoring -p '{"spec":{"ports":[{"nodePort": 30990, "port": 30990, "protocol": "TCP", "targetPort": 9090}]}}'
 
 echo k8s dashboard install finished!
