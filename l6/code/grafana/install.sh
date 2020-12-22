@@ -1,7 +1,7 @@
 echo installing grafana...
 helm repo add grafana https://grafana.github.io/helm-charts
 helm repo update
-helm install grafana --namespace monitoring grafana/grafana --version 6.1.14
+helm install grafana --namespace monitoring --values /home/project/code/grafana/values.yml grafana/grafana --version 6.1.14
 
 echo waiting for grafana deployment to complete...
 kubectl wait --for=condition=available --timeout=300s deployment/grafana -n monitoring
