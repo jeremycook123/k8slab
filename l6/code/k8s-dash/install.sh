@@ -1,5 +1,9 @@
 echo installing k8s dashboard...
+helm repo add k8s-dashboard https://kubernetes.github.io/dashboard
+helm repo update
 helm install k8s-dashboard --namespace monitoring k8s-dashboard/kubernetes-dashboard --set=protocolHttp=true --version 3.0.2
+
+echo apply k8s dashboard roles...
 kubectl apply -f /home/project/code/k8s-dash/kubernetes-dashboard-role.yaml
 kubectl apply -f /home/project/code/k8s-dash/kubernetes-dashboard-rolebinding.yaml
 
