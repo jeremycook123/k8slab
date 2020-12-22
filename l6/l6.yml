@@ -382,9 +382,15 @@ Resources:
 
             docker exec ide bash -c "kubectl create ns monitoring"
 
+            #K8s Dashboard
+            docker exec ide bash -c "chmod +x /home/project/code/k8s-dash/install.sh"
+            docker exec ide bash -c "/home/project/code/k8s-dash/install.sh"
+
+            #Prometheus
             docker exec ide bash -c "chmod +x /home/project/code/prometheus/install.sh"
             docker exec ide bash -c "/home/project/code/prometheus/install.sh"
 
+            #Grafana
             docker exec ide bash -c "chmod +x /home/project/code/grafana/install.sh"
             docker exec ide bash -c "/home/project/code/grafana/install.sh"
 
