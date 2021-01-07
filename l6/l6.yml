@@ -376,6 +376,9 @@ Resources:
               --env KUBECONFIG=/home/project/.kube/config.labcluster \
               --env K8S_CLUSTER_PUBLICIP=${EC2InstanceK8.PublicIp} \
               --env K8S_CLUSTER_PRIVATEIP=${EC2InstanceK8.PrivateIp} \
+              --env K8S_CLUSTER_DASHBOARD_URL=http://${EC2InstanceK8.PublicIp}:30990 \
+              --env K8S_CLUSTER_PROMETHEUS_URL=http://${EC2InstanceK8.PublicIp}:30900 \
+              --env K8S_CLUSTER_GRAFANA_URL=http://${EC2InstanceK8.PublicIp}:30300 \
               --privileged --name ide -dit --restart unless-stopped -p 80:3000 -v "/cloudacademy/lab:/home/project:cached" cloudacademydevops/ide:helm3
 
             docker exec ide bash -c "chmod g-rx,o-rx /home/project/.kube/config.labcluster"
