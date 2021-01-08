@@ -49,7 +49,8 @@ Parameters:
 
   EC2ImageMinikube2020Id:
     Type: AWS::EC2::Image::Id
-    Default: ami-0b48d7ada0b1954b8 #10Gb ebs rebuilt image
+    #Default: ami-0b48d7ada0b1954b8 #10Gb ebs rebuilt image
+    Default: ami-05116ff8b8db2a52b #changed minikube startup
     Description: CloudAcademy Minikube 2020 AMI id - based on Amazon Linux 2
 
 Resources:
@@ -269,12 +270,29 @@ Resources:
       UserData:
         Fn::Base64: !Sub |
             #!/bin/bash -ex
-            echo starting v1.04...
+            echo starting v1.10...
             whoami
             pwd
 
+            echo setup MINIKUBE env...
+            mkdir /cluster
+            mkdir /cluster/.kube
+            mkdir /cluster/.minikube
+            touch /cluster/.kube/config	
+            export MINIKUBE_WANTUPDATENOTIFICATION=true	
+            export MINIKUBE_WANTREPORTERRORPROMPT=false	
+            export MINIKUBE_HOME=/cluster	
+            export CHANGE_MINIKUBE_NONE_USER=true	
+            export KUBECONFIG=/cluster/.kube/config	
+
+            ### Installing minikube	
+            echo 	
+            echo Starting minikube with none vm driver ...	
+            minikube start --vm-driver=none --kubernetes-version=v1.18.3
+            #minikube addons enable ingress
+
             echo requesting ip...
-            until IP=`sudo minikube ip`
+            until IP=`minikube ip`
             do
               sleep 10
               echo trying again...
@@ -282,22 +300,22 @@ Resources:
 
             echo minikube $IP
 
-            until [ -f /root/.minikube/ca.crt ]
+            until [ -f /cluster/.minikube/ca.crt ]
             do
               sleep 5
             done
-            until [ -f /root/.minikube/profiles/minikube/client.crt ]
+            until [ -f /cluster/.minikube/profiles/minikube/client.crt ]
             do
               sleep 5
             done
-            until [ -f /root/.minikube/profiles/minikube/client.key ]
+            until [ -f /cluster/.minikube/profiles/minikube/client.key ]
             do
               sleep 5
             done
 
-            DATA1=$(cat /root/.minikube/ca.crt | base64 -w0)
-            DATA2=$(cat /root/.minikube/profiles/minikube/client.crt | base64 -w0)
-            DATA3=$(cat /root/.minikube/profiles/minikube/client.key | base64 -w0)
+            DATA1=$(cat /cluster/.minikube/ca.crt | base64 -w0)
+            DATA2=$(cat /cluster/.minikube/profiles/minikube/client.crt | base64 -w0)
+            DATA3=$(cat /cluster/.minikube/profiles/minikube/client.key | base64 -w0)
 
             cat > /tmp/config << EOF
             apiVersion: v1
