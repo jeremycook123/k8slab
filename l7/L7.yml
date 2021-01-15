@@ -1,0 +1,671 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Cloud Academy IDE Lab Platform - Spinnaker Pipelines 3 x K8s Cluster"
+
+Parameters:
+  VpcId:
+    Type: String
+    Default: "vpc-538b0236"
+    #Default: "{VpcId}"
+    Description: The ID of the default VPC
+
+  SubnetId:
+    Type: String
+    Default: "subnet-d0598389"
+    #Default: "{SubnetIdA}"
+    Description: The ID of the first subnet in the default VPC
+
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instances
+    Default: "Oregon2Icecream"
+    #Default: "{KeyName}"
+    Type: AWS::EC2::KeyPair::KeyName
+
+  EC2InstanceTypeIDE:
+    Description: EC2 instance type for the IDE cluster instance
+    Type: String
+    Default: t3.small
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.large
+      - m5.xlarge
+    ConstraintDescription: Must be a valid EC2 instance type
+
+  EC2InstanceTypeK8s:
+    Description: EC2 instance type for the K8s Minikube cluster instance
+    Type: String
+    Default: t3.large
+    AllowedValues:
+      - t3.micro
+      - t3.small
+      - t3.large
+      - m5.xlarge
+    ConstraintDescription: Must be a valid EC2 instance type
+
+  EC2ImageIDEId:
+    Type: AWS::EC2::Image::Id
+    #Default: ami-007bd16bfb0492a80 - theia starts in boot script
+    #Default: ami-0468f231d435a7ca0
+    #Default: ami-0377d853b4c9508e7
+    Default: ami-0bf149dbc8dd8b549 #8Gb ebs rebuild image
+    Description: CloudAcademy IDE AMI id - based on Amazon Linux 2
+
+  EC2ImageMinikube2020Id:
+    Type: AWS::EC2::Image::Id
+    #Default: ami-0ffd2e1f8d9da2036
+    #Default: ami-0907495a07d8a3928
+    #Default: ami-0b8641528fc72ffc8
+    #Default: ami-014b34493a5b143f5 #10Gb ebs resize
+    Default: ami-05116ff8b8db2a52b #changed minikube startup
+    Description: CloudAcademy Minikube 2020 AMI id - based on Amazon Linux 2
+
+Resources:
+  EC2SecurityGroupIDE:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: inbound rules container for spinnaker vm
+      VpcId: !Ref VpcId
+
+  EC2SecurityGroupK8s:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: inbound rules container for K8s node
+      VpcId: !Ref VpcId
+
+  EC2SecurityGroupInternal:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: inbound rules container for node to node comms
+      VpcId: !Ref VpcId
+
+  EC2SecurityGroupSSHIngressSpinnaker:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupIDE
+    Properties:
+      GroupId: !Ref EC2SecurityGroupIDE
+      Description: Allow 22 inbound SSH from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+
+  EC2SecurityGroupK8sServicePortRangeIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupK8s
+    Properties:
+      GroupId: !Ref EC2SecurityGroupK8s
+      Description: Allow 30000-32767 inbound - K8sServicePortRange from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 30000
+      ToPort: 32767
+
+  EC2SecurityGroupIDE9000Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupIDE
+    Properties:
+      GroupId: !Ref EC2SecurityGroupIDE
+      Description: Allow 9000 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 9000
+      ToPort: 9000
+
+  EC2SecurityGroupIDE80Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupIDE
+    Properties:
+      GroupId: !Ref EC2SecurityGroupIDE
+      Description: Allow 80 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+
+  EC2SecurityGroupIDE443Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupIDE
+    Properties:
+      GroupId: !Ref EC2SecurityGroupIDE
+      Description: Allow 443 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+
+  EC2SecurityGroupK8s80Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupK8s
+    Properties:
+      GroupId: !Ref EC2SecurityGroupK8s
+      Description: Allow 80 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+
+  EC2SecurityGroupK8s443Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupK8s
+    Properties:
+      GroupId: !Ref EC2SecurityGroupK8s
+      Description: Allow 443 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 443
+      ToPort: 443
+
+  EC2SecurityGroupK8s8070Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupK8s
+    Properties:
+      GroupId: !Ref EC2SecurityGroupK8s
+      Description: Allow 8070 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 8070
+      ToPort: 8070
+
+  EC2SecurityGroupK8s8080Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupK8s
+    Properties:
+      GroupId: !Ref EC2SecurityGroupK8s
+      Description: Allow 8080 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 8080
+      ToPort: 8080
+
+  EC2SecurityGroupK8s8090Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupK8s
+    Properties:
+      GroupId: !Ref EC2SecurityGroupK8s
+      Description: Allow 8090 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 8090
+      ToPort: 8090
+
+  EC2SecurityGroupIDE80Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupIDE
+    Properties:
+      GroupId: !Ref EC2SecurityGroupIDE
+      Description: Allow 80 inbound from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 80
+      ToPort: 80
+
+  EC2SecurityGroupK8sSSHIngressIDE:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupK8s
+    Properties:
+      GroupId: !Ref EC2SecurityGroupK8s
+      Description: Allow 22 inbound SSH from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+
+  EC2SecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupInternal
+    Properties:
+      GroupId: !Ref EC2SecurityGroupInternal
+      Description: Allow all inbound traffic from other nodes with the same sg attached 
+      SourceSecurityGroupId: !GetAtt EC2SecurityGroupInternal.GroupId
+      IpProtocol: -1
+
+  SpinnakerConfigS3Bucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Delete
+
+  IAMSpinnakerS3BucketUser:
+    Type: AWS::IAM::User
+    Properties:
+      Policies:
+        - PolicyName: bucket-access
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - s3:*
+              Resource:
+                - !Sub arn:aws:s3:::${SpinnakerConfigS3Bucket}
+                - !Sub arn:aws:s3:::${SpinnakerConfigS3Bucket}/*
+
+  IAMSpinnakerS3BucketUserAccessKey:
+    Type: AWS::IAM::AccessKey
+    Properties:
+      Status: Active
+      UserName:
+        Ref: IAMSpinnakerS3BucketUser
+
+  EC2LaunchInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: "EC2InstancePolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action:
+                  - ec2:Describe*
+                  - ec2messages:*
+                  - ssm:*
+                Resource: "*"
+
+  EC2LaunchInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: "/"
+      Roles:
+        - !Ref EC2LaunchInstanceRole
+
+  EC2InstanceK8sStaging:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
+    Properties:
+      IamInstanceProfile:
+        Ref: EC2LaunchInstanceProfile
+      InstanceType:
+        Ref: EC2InstanceTypeK8s
+      KeyName:
+        Ref: KeyName
+      ImageId:
+        Ref: EC2ImageMinikube2020Id
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet:
+            - Ref: EC2SecurityGroupK8s
+            - Ref: EC2SecurityGroupInternal
+          SubnetId:
+            Ref: SubnetId
+      UserData:
+        Fn::Base64: !Sub |
+            #!/bin/bash -ex
+            echo starting v1.10...
+            whoami
+            pwd
+
+            echo setup MINIKUBE env...
+            mkdir /cluster
+            mkdir /cluster/.kube
+            mkdir /cluster/.minikube
+            touch /cluster/.kube/config
+            export MINIKUBE_WANTUPDATENOTIFICATION=false
+            export MINIKUBE_WANTREPORTERRORPROMPT=false
+            export MINIKUBE_HOME=/cluster
+            export CHANGE_MINIKUBE_NONE_USER=true
+            export KUBECONFIG=/cluster/.kube/config
+
+            ### Installing minikube
+            echo
+            echo Starting minikube with none vm driver ...
+            minikube start --vm-driver=none --kubernetes-version=v1.18.3
+            minikube addons enable ingress
+
+            echo requesting ip...
+            until IP=`minikube ip`
+            do
+              sleep 10
+              echo trying again...
+            done
+
+            echo minikube $IP
+
+            until [ -f /cluster/.minikube/ca.crt ]
+            do
+              sleep 5
+            done
+            until [ -f /cluster/.minikube/profiles/minikube/client.crt ]
+            do
+              sleep 5
+            done
+            until [ -f /cluster/.minikube/profiles/minikube/client.key ]
+            do
+              sleep 5
+            done
+
+            DATA1=$(cat /cluster/.minikube/ca.crt | base64 -w0)
+            DATA2=$(cat /cluster/.minikube/profiles/minikube/client.crt | base64 -w0)
+            DATA3=$(cat /cluster/.minikube/profiles/minikube/client.key | base64 -w0)
+            
+            cat > /tmp/config << EOF
+            apiVersion: v1
+            clusters:
+            * cluster:
+                certificate-authority-data: $DATA1
+                server: https://$IP:8443
+              name: staging
+            contexts:
+            * context:
+                cluster: staging
+                user: staging
+              name: staging
+            current-context: staging
+            kind: Config
+            preferences: {}
+            users:
+            * name: staging
+              user:
+                client-certificate-data: $DATA2
+                client-key-data: $DATA3
+            EOF
+
+            sed -i 's/*/-/g' /tmp/config
+
+            cd /tmp
+            python -m SimpleHTTPServer 10000 &> /dev/null &
+            pid=$!
+
+            /opt/aws/bin/cfn-signal --exit-code 0 --resource EC2InstanceK8sStaging --region ${AWS::Region} --stack ${AWS::StackName}
+            echo finished!!
+      Tags:
+        - Key: Name
+          Value: staging.k8s.cloudacademy.platform.instance
+
+  EC2InstanceK8sProd:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
+    Properties:
+      IamInstanceProfile:
+        Ref: EC2LaunchInstanceProfile
+      InstanceType:
+        Ref: EC2InstanceTypeK8s
+      KeyName:
+        Ref: KeyName
+      ImageId:
+        Ref: EC2ImageMinikube2020Id
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet:
+            - Ref: EC2SecurityGroupK8s
+            - Ref: EC2SecurityGroupInternal
+          SubnetId:
+            Ref: SubnetId
+      UserData:
+        Fn::Base64: !Sub |
+            #!/bin/bash -ex
+            echo starting v1.10...
+            whoami
+            pwd
+
+            echo setup MINIKUBE env...
+            mkdir /cluster
+            mkdir /cluster/.kube
+            mkdir /cluster/.minikube
+            touch /cluster/.kube/config
+            export MINIKUBE_WANTUPDATENOTIFICATION=false
+            export MINIKUBE_WANTREPORTERRORPROMPT=false
+            export MINIKUBE_HOME=/cluster
+            export CHANGE_MINIKUBE_NONE_USER=true
+            export KUBECONFIG=/cluster/.kube/config
+
+            ### Installing minikube
+            echo
+            echo Starting minikube with none vm driver ...
+            minikube start --vm-driver=none --kubernetes-version=v1.18.3
+            minikube addons enable ingress
+
+            echo requesting ip...
+            until IP=`minikube ip`
+            do
+              sleep 10
+              echo trying again...
+            done
+
+            echo minikube $IP
+
+            until [ -f /cluster/.minikube/ca.crt ]
+            do
+              sleep 5
+            done
+            until [ -f /cluster/.minikube/profiles/minikube/client.crt ]
+            do
+              sleep 5
+            done
+            until [ -f /cluster/.minikube/profiles/minikube/client.key ]
+            do
+              sleep 5
+            done
+
+            DATA1=$(cat /cluster/.minikube/ca.crt | base64 -w0)
+            DATA2=$(cat /cluster/.minikube/profiles/minikube/client.crt | base64 -w0)
+            DATA3=$(cat /cluster/.minikube/profiles/minikube/client.key | base64 -w0)
+
+            cat > /tmp/config << EOF
+            apiVersion: v1
+            clusters:
+            * cluster:
+                certificate-authority-data: $DATA1
+                server: https://$IP:8443
+              name: prod
+            contexts:
+            * context:
+                cluster: prod
+                user: prod
+              name: prod
+            current-context: prod
+            kind: Config
+            preferences: {}
+            users:
+            * name: prod
+              user:
+                client-certificate-data: $DATA2
+                client-key-data: $DATA3
+            EOF
+
+            sed -i 's/*/-/g' /tmp/config
+
+            cd /tmp
+            python -m SimpleHTTPServer 10000 &> /dev/null &
+            pid=$!
+
+            /opt/aws/bin/cfn-signal --exit-code 0 --resource EC2InstanceK8sProd --region ${AWS::Region} --stack ${AWS::StackName}
+            echo finished!!
+      Tags:
+        - Key: Name
+          Value: prod.k8s.cloudacademy.platform.instance
+
+  EC2InstanceK8sSpinnaker:
+    Type: AWS::EC2::Instance
+    CreationPolicy:
+      ResourceSignal:
+        Timeout: PT10M
+    Properties:
+      IamInstanceProfile:
+        Ref: EC2LaunchInstanceProfile
+      InstanceType:
+        Ref: EC2InstanceTypeK8s
+      KeyName:
+        Ref: KeyName
+      ImageId:
+        Ref: EC2ImageMinikube2020Id
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet:
+            - Ref: EC2SecurityGroupK8s
+            - Ref: EC2SecurityGroupInternal
+          SubnetId:
+            Ref: SubnetId
+      UserData:
+        Fn::Base64: !Sub |
+            #!/bin/bash -ex
+            echo starting v1.10...
+            whoami
+            pwd
+
+            echo setup MINIKUBE env...
+            mkdir /cluster
+            mkdir /cluster/.kube
+            mkdir /cluster/.minikube
+            touch /cluster/.kube/config
+            export MINIKUBE_WANTUPDATENOTIFICATION=false
+            export MINIKUBE_WANTREPORTERRORPROMPT=false
+            export MINIKUBE_HOME=/cluster
+            export CHANGE_MINIKUBE_NONE_USER=true
+            export KUBECONFIG=/cluster/.kube/config
+
+            ### Installing minikube
+            echo
+            echo Starting minikube with none vm driver ...
+            minikube start --vm-driver=none --kubernetes-version=v1.18.3
+            minikube addons enable ingress
+
+            echo requesting ip...
+            until IP=`minikube ip`
+            do
+              sleep 10
+              echo trying again...
+            done
+
+            echo minikube $IP
+
+            until [ -f /cluster/.minikube/ca.crt ]
+            do
+              sleep 5
+            done
+            until [ -f /cluster/.minikube/profiles/minikube/client.crt ]
+            do
+              sleep 5
+            done
+            until [ -f /cluster/.minikube/profiles/minikube/client.key ]
+            do
+              sleep 5
+            done
+
+            DATA1=$(cat /cluster/.minikube/ca.crt | base64 -w0)
+            DATA2=$(cat /cluster/.minikube/profiles/minikube/client.crt | base64 -w0)
+            DATA3=$(cat /cluster/.minikube/profiles/minikube/client.key | base64 -w0)
+
+            cat > /tmp/config << EOF
+            apiVersion: v1
+            clusters:
+            * cluster:
+                certificate-authority-data: $DATA1
+                server: https://$IP:8443
+              name: spinnaker
+            contexts:
+            * context:
+                cluster: spinnaker
+                user: spinnaker
+              name: spinnaker
+            current-context: spinnaker
+            kind: Config
+            preferences: {}
+            users:
+            * name: spinnaker
+              user:
+                client-certificate-data: $DATA2
+                client-key-data: $DATA3
+            EOF
+
+            sed -i 's/*/-/g' /tmp/config
+
+            cd /tmp
+            python -m SimpleHTTPServer 10000 &> /dev/null &
+            pid=$!
+
+            /opt/aws/bin/cfn-signal --exit-code 0 --resource EC2InstanceK8sSpinnaker --region ${AWS::Region} --stack ${AWS::StackName}
+            echo finished!!
+      Tags:
+        - Key: Name
+          Value: spinnaker.k8s.cloudacademy.platform.instance
+
+  EC2InstanceIDE:
+    DependsOn: [EC2InstanceK8sSpinnaker, EC2InstanceK8sStaging, EC2InstanceK8sProd]
+    Type: AWS::EC2::Instance
+    Properties:
+      IamInstanceProfile:
+        Ref: EC2LaunchInstanceProfile
+      InstanceType:
+        Ref: EC2InstanceTypeIDE
+      KeyName:
+        Ref: KeyName
+      ImageId:
+        Ref: EC2ImageIDEId
+      NetworkInterfaces:
+        - AssociatePublicIpAddress: true
+          DeviceIndex: 0
+          GroupSet:
+            - Ref: EC2SecurityGroupIDE
+            - Ref: EC2SecurityGroupInternal
+          SubnetId:
+            Ref: SubnetId
+      UserData:
+        Fn::Base64: !Sub |
+            #!/bin/bash -ex
+            echo starting v1.04...
+            whoami
+            pwd
+
+            mkdir -p /cloudacademy/lab
+            cd /cloudacademy/lab
+            curl -sL https://api.github.com/repos/cloudacademy/devsecops-lab/releases/latest | jq -r '.assets[].browser_download_url' | wget -qi -
+            unzip *.zip
+            find . -type f -name 'ingress.yaml' -exec sed -i 's/PUBLICIP/${EC2InstanceK8.PublicIp}/g' {} +
+
+            mkdir -p /cloudacademy/lab/.kube
+            cd /cloudacademy/lab/.kube
+            curl -o config.spinnaker ${EC2InstanceK8sSpinnaker.PrivateIp}:10000/config
+            curl -o config.staging ${EC2InstanceK8sStaging.PrivateIp}:10000/config
+            curl -o config.prod ${EC2InstanceK8sProd.PrivateIp}:10000/config
+            chown -R ec2-user:ec2-user /cloudacademy
+
+            echo starting docker IDE containers...
+            docker run --name socat -d --restart=always -p 127.0.0.1:2376:2375 -v /var/run/docker.sock:/var/run/docker.sock alpine/socat tcp-listen:2375,fork,reuseaddr unix-connect:/var/run/docker.sock
+            docker run --link socat:socat \
+              --env KUBECONFIG=/home/project/.kube/config.spinnaker:/home/project/.kube/config.staging:/home/project/.kube/config.prod \
+              --env SPINNAKER_CLUSTER_PUBLICIP=${EC2InstanceK8sSpinnaker.PublicIp} \
+              --env SPINNAKER_CLUSTER_PRIVATEIP=${EC2InstanceK8sSpinnaker.PrivateIp} \
+              --env SPINNAKER_URL=spinnaker.cloudacademy.${EC2InstanceK8sSpinnaker.PublicIp}.nip.io \
+              --env DOCKER_HOST=tcp://socat:2375 \
+              --env SPINNAKER_S3_BUCKET=${SpinnakerConfigS3Bucket} \
+              --env SPINNAKER_S3_ACCESSKEY=${IAMSpinnakerS3BucketUserAccessKey} \
+              --env SPINNAKER_S3_SECRETACCESSKEY=${IAMSpinnakerS3BucketUserAccessKey.SecretAccessKey} \
+              --env K8_PROD_CLUSTER_PUBLICIP=${EC2InstanceK8sProd.PublicIp} \
+              --env K8_PROD_CLUSTER_PRIVATEIP=${EC2InstanceK8sProd.PrivateIp} \
+              --env K8_STAGING_CLUSTER_PUBLICIP=${EC2InstanceK8sStaging.PublicIp} \
+              --env K8_STAGING_CLUSTER_PRIVATEIP=${EC2InstanceK8sStaging.PrivateIp} \
+              --privileged --name ide -dit --restart unless-stopped -p 80:3000 -v "/cloudacademy/lab:/home/project:cached" cloudacademydevops/ide:spinnaker
+
+            docker exec ide mkdir /home/theia/.kube/
+            docker exec ide bash -c "kubectl config view --flatten > /home/theia/.kube/config"
+
+            docker exec ide bash -c "/home/project/code/spinnaker/install.sh"
+            echo finished!!
+      Tags:
+        - Key: Name
+          Value: ide.cloudacademy.platform.instance
+
+Outputs:
+  SubnetId:
+    Description: Subnet used in the VPC
+    Value: !Join [",", [!Ref SubnetId]]
+
+  VpcId:
+    Description: The VPC Id
+    Value: !Ref VpcId
