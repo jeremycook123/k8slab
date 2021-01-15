@@ -321,7 +321,6 @@ Resources:
             echo
             echo Starting minikube with none vm driver ...
             minikube start --vm-driver=none --kubernetes-version=v1.18.3
-            minikube addons enable ingress
 
             echo requesting ip...
             until IP=`minikube ip`
@@ -427,7 +426,6 @@ Resources:
             echo
             echo Starting minikube with none vm driver ...
             minikube start --vm-driver=none --kubernetes-version=v1.18.3
-            minikube addons enable ingress
 
             echo requesting ip...
             until IP=`minikube ip`
@@ -533,7 +531,6 @@ Resources:
             echo
             echo Starting minikube with none vm driver ...
             minikube start --vm-driver=none --kubernetes-version=v1.18.3
-            minikube addons enable ingress
 
             echo requesting ip...
             until IP=`minikube ip`
@@ -626,7 +623,6 @@ Resources:
             cd /cloudacademy/lab
             curl -sL https://api.github.com/repos/cloudacademy/devsecops-lab/releases/latest | jq -r '.assets[].browser_download_url' | wget -qi -
             unzip *.zip
-            find . -type f -name 'ingress.yaml' -exec sed -i 's/PUBLICIP/${EC2InstanceK8.PublicIp}/g' {} +
 
             mkdir -p /cloudacademy/lab/.kube
             cd /cloudacademy/lab/.kube
@@ -655,6 +651,7 @@ Resources:
             docker exec ide mkdir /home/theia/.kube/
             docker exec ide bash -c "kubectl config view --flatten > /home/theia/.kube/config"
 
+            docker exec ide bash -c "chmod +x /home/project/code/spinnaker/install.sh"
             docker exec ide bash -c "/home/project/code/spinnaker/install.sh"
             echo finished!!
       Tags:
