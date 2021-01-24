@@ -23,7 +23,7 @@ Parameters:
   EC2InstanceTypeIDE:
     Description: EC2 instance type for the IDE cluster instance
     Type: String
-    Default: t3.small
+    Default: t3.large
     AllowedValues:
       - t3.micro
       - t3.small
@@ -78,39 +78,6 @@ Resources:
       GroupDescription: inbound rules container for node to node comms
       VpcId: !Ref VpcId
 
-  EC2SecurityGroupSSHIngressSpinnaker:
-    Type: AWS::EC2::SecurityGroupIngress
-    DependsOn: EC2SecurityGroupIDE
-    Properties:
-      GroupId: !Ref EC2SecurityGroupIDE
-      Description: Allow 22 inbound SSH from everywhere
-      CidrIp: "0.0.0.0/0"
-      IpProtocol: tcp
-      FromPort: 22
-      ToPort: 22
-
-  EC2SecurityGroupK8sServicePortRangeIngress:
-    Type: AWS::EC2::SecurityGroupIngress
-    DependsOn: EC2SecurityGroupK8s
-    Properties:
-      GroupId: !Ref EC2SecurityGroupK8s
-      Description: Allow 30000-32767 inbound - K8sServicePortRange from everywhere
-      CidrIp: "0.0.0.0/0"
-      IpProtocol: tcp
-      FromPort: 30000
-      ToPort: 32767
-
-  EC2SecurityGroupIDE9000Ingress:
-    Type: AWS::EC2::SecurityGroupIngress
-    DependsOn: EC2SecurityGroupIDE
-    Properties:
-      GroupId: !Ref EC2SecurityGroupIDE
-      Description: Allow 9000 inbound from everywhere
-      CidrIp: "0.0.0.0/0"
-      IpProtocol: tcp
-      FromPort: 9000
-      ToPort: 9000
-
   EC2SecurityGroupIDE80Ingress:
     Type: AWS::EC2::SecurityGroupIngress
     DependsOn: EC2SecurityGroupIDE
@@ -132,6 +99,50 @@ Resources:
       IpProtocol: tcp
       FromPort: 443
       ToPort: 443
+
+  EC2SecurityGroupIDE22Ingress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupIDE
+    Properties:
+      GroupId: !Ref EC2SecurityGroupIDE
+      Description: Allow 22 inbound SSH from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+
+  EC2SecurityGroupIDE8000RangeIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupIDE
+    Properties:
+      GroupId: !Ref EC2SecurityGroupIDE
+      Description: Allow 8000-8999 inbound - AdhocServicesPortRange from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 8000
+      ToPort: 8999
+
+  EC2SecurityGroupIDE9000RangeIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupIDE
+    Properties:
+      GroupId: !Ref EC2SecurityGroupIDE
+      Description: Allow 9000-9999 inbound - AdhocServicesPortRange from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 9000
+      ToPort: 9999
+
+  EC2SecurityGroupK8s8000RangeIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupIDE
+    Properties:
+      GroupId: !Ref EC2SecurityGroupIDE
+      Description: Allow 8000-8999 inbound - AdhocServicesPortRange from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 8000
+      ToPort: 8999
 
   EC2SecurityGroupK8s80Ingress:
     Type: AWS::EC2::SecurityGroupIngress
@@ -155,50 +166,6 @@ Resources:
       FromPort: 443
       ToPort: 443
 
-  EC2SecurityGroupK8s8070Ingress:
-    Type: AWS::EC2::SecurityGroupIngress
-    DependsOn: EC2SecurityGroupK8s
-    Properties:
-      GroupId: !Ref EC2SecurityGroupK8s
-      Description: Allow 8070 inbound from everywhere
-      CidrIp: "0.0.0.0/0"
-      IpProtocol: tcp
-      FromPort: 8070
-      ToPort: 8070
-
-  EC2SecurityGroupK8s8080Ingress:
-    Type: AWS::EC2::SecurityGroupIngress
-    DependsOn: EC2SecurityGroupK8s
-    Properties:
-      GroupId: !Ref EC2SecurityGroupK8s
-      Description: Allow 8080 inbound from everywhere
-      CidrIp: "0.0.0.0/0"
-      IpProtocol: tcp
-      FromPort: 8080
-      ToPort: 8080
-
-  EC2SecurityGroupK8s8090Ingress:
-    Type: AWS::EC2::SecurityGroupIngress
-    DependsOn: EC2SecurityGroupK8s
-    Properties:
-      GroupId: !Ref EC2SecurityGroupK8s
-      Description: Allow 8090 inbound from everywhere
-      CidrIp: "0.0.0.0/0"
-      IpProtocol: tcp
-      FromPort: 8090
-      ToPort: 8090
-
-  EC2SecurityGroupIDE80Ingress:
-    Type: AWS::EC2::SecurityGroupIngress
-    DependsOn: EC2SecurityGroupIDE
-    Properties:
-      GroupId: !Ref EC2SecurityGroupIDE
-      Description: Allow 80 inbound from everywhere
-      CidrIp: "0.0.0.0/0"
-      IpProtocol: tcp
-      FromPort: 80
-      ToPort: 80
-
   EC2SecurityGroupK8sSSHIngressIDE:
     Type: AWS::EC2::SecurityGroupIngress
     DependsOn: EC2SecurityGroupK8s
@@ -209,6 +176,17 @@ Resources:
       IpProtocol: tcp
       FromPort: 22
       ToPort: 22
+
+  EC2SecurityGroupK8s30000RangeIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    DependsOn: EC2SecurityGroupK8s
+    Properties:
+      GroupId: !Ref EC2SecurityGroupK8s
+      Description: Allow 30000-32767 inbound - K8sServicePortRange from everywhere
+      CidrIp: "0.0.0.0/0"
+      IpProtocol: tcp
+      FromPort: 30000
+      ToPort: 32767
 
   EC2SecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
@@ -278,6 +256,7 @@ Resources:
         - !Ref EC2LaunchInstanceRole
 
   EC2InstanceK8sStaging:
+    DependsOn: [EC2InstanceIDEPublicIPAddress]
     Type: AWS::EC2::Instance
     CreationPolicy:
       ResourceSignal:
@@ -305,6 +284,11 @@ Resources:
             echo starting v1.10...
             whoami
             pwd
+
+            cat > /etc/docker/daemon.json << EOF
+            { "insecure-registries" : [ "${EC2InstanceIDEPublicIPAddress}:8082", "${EC2InstanceIDEPublicIPAddress}:8083" ] }
+            EOF
+            systemctl restart docker.service
 
             echo setup MINIKUBE env...
             mkdir /cluster
@@ -383,6 +367,7 @@ Resources:
           Value: staging.k8s.cloudacademy.platform.instance
 
   EC2InstanceK8sProd:
+    DependsOn: [EC2InstanceIDEPublicIPAddress]
     Type: AWS::EC2::Instance
     CreationPolicy:
       ResourceSignal:
@@ -410,6 +395,11 @@ Resources:
             echo starting v1.10...
             whoami
             pwd
+
+            cat > /etc/docker/daemon.json << EOF
+            { "insecure-registries" : [ "${EC2InstanceIDEPublicIPAddress}:8082", "${EC2InstanceIDEPublicIPAddress}:8083" ] }
+            EOF
+            systemctl restart docker.service
 
             echo setup MINIKUBE env...
             mkdir /cluster
@@ -591,6 +581,18 @@ Resources:
       Tags:
         - Key: Name
           Value: spinnaker.k8s.cloudacademy.platform.instance
+  
+  EC2InstanceIDEPublicIPAddress:
+    Type: AWS::EC2::EIP
+    Properties: 
+      Domain: vpc
+
+  EC2InstanceIDEPublicIPAddressAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties: 
+      AllocationId: !GetAtt EC2InstanceIDEPublicIPAddress.AllocationId
+      InstanceId: 
+        Ref: EC2InstanceIDE
 
   EC2InstanceIDE:
     DependsOn: [EC2InstanceK8sSpinnaker, EC2InstanceK8sStaging, EC2InstanceK8sProd]
@@ -605,7 +607,7 @@ Resources:
       ImageId:
         Ref: EC2ImageIDEId
       NetworkInterfaces:
-        - AssociatePublicIpAddress: true
+        - AssociatePublicIpAddress: false
           DeviceIndex: 0
           GroupSet:
             - Ref: EC2SecurityGroupIDE
@@ -631,9 +633,68 @@ Resources:
             curl -o config.prod ${EC2InstanceK8sProd.PrivateIp}:10000/config
             chown -R ec2-user:ec2-user /cloudacademy
 
+            PUBLIC_IP=`curl http://169.254.169.254/latest/meta-data/public-ipv4`
+            PRIVATE_IP=`curl http://169.254.169.254/latest/meta-data/local-ipv4`
+
             echo starting docker IDE containers...
-            docker run --name socat -d --restart=always -p 127.0.0.1:2376:2375 -v /var/run/docker.sock:/var/run/docker.sock alpine/socat tcp-listen:2375,fork,reuseaddr unix-connect:/var/run/docker.sock
-            docker run --link socat:socat \
+            
+            docker network create cloudacademynetwork
+
+            cat > /etc/docker/daemon.json << EOF
+            { "insecure-registries" : [ "nexus:8082", "nexus:8083", "${EC2InstanceIDEPublicIPAddress}:8082", "${EC2InstanceIDEPublicIPAddress}:8083" ] }
+            EOF
+            systemctl restart docker.service
+
+            #SOCAT
+            docker run --name socat --network=cloudacademynetwork -d --restart=always -p 127.0.0.1:2376:2375 -v /var/run/docker.sock:/var/run/docker.sock alpine/socat tcp-listen:2375,fork,reuseaddr unix-connect:/var/run/docker.sock
+            
+            #NEXUS
+            docker run \
+              --name nexus \
+              --network=cloudacademynetwork \
+              --env SPINNAKER_CLUSTER_PUBLICIP=${EC2InstanceK8sSpinnaker.PublicIp} \
+              --env SPINNAKER_CLUSTER_PRIVATEIP=${EC2InstanceK8sSpinnaker.PrivateIp} \
+              --env SPINNAKER_URL=spinnaker.cloudacademy.${EC2InstanceK8sSpinnaker.PublicIp}.nip.io \
+              --env DOCKER_HOST=tcp://socat:2375 \
+              --env SPINNAKER_S3_BUCKET=${SpinnakerConfigS3Bucket} \
+              --env SPINNAKER_S3_ACCESSKEY=${IAMSpinnakerS3BucketUserAccessKey} \
+              --env SPINNAKER_S3_SECRETACCESSKEY=${IAMSpinnakerS3BucketUserAccessKey.SecretAccessKey} \
+              --env K8_PROD_CLUSTER_PUBLICIP=${EC2InstanceK8sProd.PublicIp} \
+              --env K8_PROD_CLUSTER_PRIVATEIP=${EC2InstanceK8sProd.PrivateIp} \
+              --env K8_STAGING_CLUSTER_PUBLICIP=${EC2InstanceK8sStaging.PublicIp} \
+              --env K8_STAGING_CLUSTER_PRIVATEIP=${EC2InstanceK8sStaging.PrivateIp} \
+              --privileged -dit --restart unless-stopped -p 8081:8081 -p 8082:8082 -p 8083:8083 sonatype/nexus3:3.0.0
+
+            NEXUSIP=`docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' nexus`
+            echo "$NEXUSIP nexus" >> /etc/hosts
+
+            #JENKINS
+            docker run \
+              --name jenkins \
+              --network=cloudacademynetwork \
+              --env SPINNAKER_CLUSTER_PUBLICIP=${EC2InstanceK8sSpinnaker.PublicIp} \
+              --env SPINNAKER_CLUSTER_PRIVATEIP=${EC2InstanceK8sSpinnaker.PrivateIp} \
+              --env SPINNAKER_URL=spinnaker.cloudacademy.${EC2InstanceK8sSpinnaker.PublicIp}.nip.io \
+              --env DOCKER_HOST=tcp://socat:2375 \
+              --env SPINNAKER_S3_BUCKET=${SpinnakerConfigS3Bucket} \
+              --env SPINNAKER_S3_ACCESSKEY=${IAMSpinnakerS3BucketUserAccessKey} \
+              --env SPINNAKER_S3_SECRETACCESSKEY=${IAMSpinnakerS3BucketUserAccessKey.SecretAccessKey} \
+              --env K8_PROD_CLUSTER_PUBLICIP=${EC2InstanceK8sProd.PublicIp} \
+              --env K8_PROD_CLUSTER_PRIVATEIP=${EC2InstanceK8sProd.PrivateIp} \
+              --env K8_STAGING_CLUSTER_PUBLICIP=${EC2InstanceK8sStaging.PublicIp} \
+              --env K8_STAGING_CLUSTER_PRIVATEIP=${EC2InstanceK8sStaging.PrivateIp} \
+              --privileged -dit --restart unless-stopped -p 8080:8080 jenkins/jenkins:lts
+
+            until JENKINS_INITIAL_DEFAULT_PASSWORD=`docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword`
+            do
+              sleep 5
+              echo trying again...
+            done
+
+            #THEIA
+            docker run \
+              --name ide \
+              --network=cloudacademynetwork \
               --env KUBECONFIG=/home/project/.kube/config.spinnaker:/home/project/.kube/config.staging:/home/project/.kube/config.prod \
               --env SPINNAKER_CLUSTER_PUBLICIP=${EC2InstanceK8sSpinnaker.PublicIp} \
               --env SPINNAKER_CLUSTER_PRIVATEIP=${EC2InstanceK8sSpinnaker.PrivateIp} \
@@ -646,13 +707,19 @@ Resources:
               --env K8_PROD_CLUSTER_PRIVATEIP=${EC2InstanceK8sProd.PrivateIp} \
               --env K8_STAGING_CLUSTER_PUBLICIP=${EC2InstanceK8sStaging.PublicIp} \
               --env K8_STAGING_CLUSTER_PRIVATEIP=${EC2InstanceK8sStaging.PrivateIp} \
-              --privileged --name ide -dit --restart unless-stopped -p 80:3000 -v "/cloudacademy/lab:/home/project:cached" cloudacademydevops/ide:spinnaker
+              --env NEXUS_PUBLICIP=$PUBLIC_IP \
+              --env NEXUS_PRIVATEIP=$PRIVATE_IP \
+              --env JENKINS_PUBLICIP=$PUBLIC_IP \
+              --env JENKINS_PRIVATEIP=$PRIVATE_IP \
+              --env JENKINS_INITIAL_DEFAULT_PASSWORD=$JENKINS_INITIAL_DEFAULT_PASSWORD \
+              --privileged -dit --restart unless-stopped -p 80:3000 -v "/cloudacademy/lab:/home/project:cached" cloudacademydevops/ide:spinnaker
 
             docker exec ide mkdir /home/theia/.kube/
             docker exec ide bash -c "kubectl config view --flatten > /home/theia/.kube/config"
 
             docker exec ide bash -c "chmod +x /home/project/code/spinnaker/install.sh"
             docker exec ide bash -c "/home/project/code/spinnaker/install.sh"
+
             echo finished!!
       Tags:
         - Key: Name

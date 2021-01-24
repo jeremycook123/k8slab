@@ -18,11 +18,60 @@ https://dzone.com/articles/jenkins-publish-maven-artifacts-to-nexus-oss-using
 Install Plugins
 nexus-artifact-uploader
 pipeline-utility-steps
+Docker
+Docker Pipeline
 
+=========================
+
+//START-OF-SCRIPT
+node {
+    def SPLUNK_HOSTNAME='splunk'
+    def DOCKER_HOME = tool name: 'docker-latest'
+    def GRADLE_HOME = tool name: 'gradle-4.10.2', type: 'hudson.plugins.gradle.GradleInstallation'
+    def REPO_URL = 'https://github.com/cloudacademy/devops-webapp.git'
+    def DOCKERHUB_REPO = 'cloudacademydevops/webapp'
+
+    stage('Clone') {        
+        git url: REPO_URL
+    }
+
+    stage('Build') {
+        sh "${GRADLE_HOME}/bin/gradle build"
+        sh "ls -la build/libs/*.war"
+        sh "echo ====================="
+        sh "cp build/libs/*.war docker/webapp.war"
+        sh "pwd"
+        sh "ls -la"
+        sh "ls -la ./docker"
+    }
+
+    stage ('Docker Build') {
+        docker.withTool('docker-latest') {
+            sh "printenv"
+            sh "pwd"
+            sh "ls -la"
+            def image3 = docker.build("nexus:8083/${DOCKERHUB_REPO}:v${BUILD_NUMBER}", "./docker")
+        }
+    }
+
+    stage ('Docker Push') {
+        docker.withTool('docker-latest') {
+            withCredentials([usernamePassword(credentialsId: 'nexus',
+                             usernameVariable: 'USERNAME', passwordVariable: 'PASSWORD')]) {
+                sh "docker login -u ${USERNAME} -p ${PASSWORD} nexus:8083"
+                sh "docker push nexus:8083/${DOCKERHUB_REPO}:v${BUILD_NUMBER}"
+            }            
+        }
+    }
+
+}
+//END-OF-SCRIPT
+
+=========================
 
 pipeline {
     agent {
-        label "master"
+        label "docker-java-slave"
     }
     tools {
         // Note: this should match with the tool name configured in your jenkins instance (JENKINS_URL/configureTools/)
@@ -34,18 +83,19 @@ pipeline {
         // This can be http or https
         NEXUS_PROTOCOL = "http"
         // Where your Nexus is running
-        NEXUS_URL = "localhost:8081"
+        NEXUS_URL = "nexus:8081"
         // Repository where we will upload the artifact
         NEXUS_REPOSITORY = "maven-snapshots"
         // Jenkins credential id to authenticate to Nexus OSS
-        NEXUS_CREDENTIAL_ID = "jenkins"
+        NEXUS_CREDENTIAL_ID = "nexus"
     }
     stages {
         stage("clone code") {
             steps {
                 script {
                     // Let's clone the source
-                    git 'https://github.com/danielalejandrohc/cargotracker.git';
+                    //git 'https://github.com/danielalejandrohc/cargotracker.git';
+                    git branch: 'main', url: 'https://github.com/cloudacademy/java-tdd-bitcoinconverter'
                 }
             }
         }
@@ -54,7 +104,8 @@ pipeline {
                 script {
                     // If you are using Windows then you should use "bat" step
                     // Since unit testing is out of the scope we skip them
-                    sh "mvn package -DskipTests=true"
+                    sh "mvn clean package"
+                    //sh "mvn package -DskipTests=true"
                 }
             }
         }
@@ -103,8 +154,63 @@ pipeline {
     }
 }
 
-
-
 docker exec -it -u root jenkins-local bash
 wget https://download.java.net/java/GA/jdk11/28/GPL/openjdk-11+28_linux-x64_bin.tar.gz -O /tmp/openjdk-11+28_linux-x64_bin.tar.gz
 tar xfvz /tmp/openjdk-11+28_linux-x64_bin.tar.gz --directory /usr/local/
+
+
+
+http://spinnaker.cloudacademy.52.39.183.177.nip.io:30200/
+
+
+docker exec -it jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+
+docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' nexus
+
+hal config provider docker-registry enable
+hal config provider docker-registry account add cloudacademy-docker-registry \
+ --address http://$NEXUS_PUBLICIP:8083 \
+ --repositories cloudacademydevops/webapp \
+ --insecure-registry true \
+ --username admin \
+ --password admin123
+
+hal deploy apply
+
+
+
+kubectl config get-contexts 
+kubectl config current-context
+
+
+=====================
+
+Staging cluster Note:
+
+kubectl config use-context staging
+kubectl create secret docker-registry regcred --docker-server=$NEXUS_PUBLICIP:8083 --docker-username=admin --docker-password=admin123 --docker-email=admin@here.com -n default
+/etc/docker/daemon.json
+{ "insecure-registries" : [ "nexus:8082", "nexus:8083", "18.237.219.217:8082", "18.237.219.217:8083" ] }
+ systemctl restart docker.service
+
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    role: myrole
+  name: static-web
+  namespace: default
+spec:
+  containers:
+    - image: '54.185.81.93:8083/cloudacademydevops/webapp'
+      name: web
+      ports:
+        - containerPort: 8080
+          name: web
+          protocol: TCP
+  imagePullSecrets:
+    - name: regcred
+
+
+
+

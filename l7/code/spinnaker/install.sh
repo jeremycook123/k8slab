@@ -3,6 +3,7 @@ hal -v
 hal config version edit --version 1.21.4
 hal config security api edit --override-base-url http://gate.cloudacademy.$SPINNAKER_CLUSTER_PUBLICIP.nip.io:30100
 hal config security ui edit --override-base-url http://spinnaker.cloudacademy.$SPINNAKER_CLUSTER_PUBLICIP.nip.io:30200
+hal config provider docker-registry enable
 hal config provider kubernetes enable
 hal config provider kubernetes account add spinnaker --context spinnaker
 hal config provider kubernetes account add staging --context staging
@@ -15,7 +16,7 @@ hal config storage s3 edit \
  --secret-access-key $SPINNAKER_S3_SECRETACCESSKEY \
  --bucket $SPINNAKER_S3_BUCKET \
  --region us-west-2
- hal config storage edit --type s3 
+ hal config storage edit --type s3
  kubectl config use-context spinnaker
  kubectl config get-contexts
  hal deploy apply
