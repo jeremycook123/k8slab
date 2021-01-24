@@ -1,0 +1,112 @@
+helm install my-kubernetes-dashboard k8s-dashboard/kubernetes-dashboard --version 3.0.2 --set=protocolHttp=true
+
+kubectl expose deployment my-kubernetes-dashboard --type=NodePort --name=k8s-dashboard --port=30990 --target-port=9090 -n default
+kubectl patch service k8s-dashboard -n default -p '{"spec":{"ports":[{"nodePort": 30990, "port": 30990, "protocol": "TCP", "targetPort": 9090}]}}'
+
+cat > kubernetes-dashboard-role.yaml<<EOF
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: Role
+metadata:
+  name: dash-kubernetes-dashboard-read-only
+rules:
+- apiGroups:
+  - "*"
+  resources:
+  - configmaps
+  - cronjobs
+  - daemonsets
+  - deployments
+  - events
+  - ingresses
+  - jobs
+  - persistentvolumeclaims
+  - persistentvolumes
+  - pods
+  - pods/log
+  - replicasets
+  - replicationcontrollers
+  - services
+  - statefulsets
+  verbs:
+  - describe
+  - get
+  - list
+  - watch
+EOF
+
+cat > kubernetes-dashboard-rolebinding.yaml<<EOF
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: RoleBinding
+metadata:
+  name: dash-kubernetes-dashboard-read-only
+  labels:
+    app: kubernetes-dashboard
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: dash-kubernetes-dashboard-read-only
+subjects:
+- kind: ServiceAccount
+  name: dash-kubernetes-dashboard
+  namespace: default
+EOF
+
+
+datasources
+
+
+
+'{"name": "Prometheus","type": "prometheus","access": "proxy","orgId": "1","url": "http://34.216.253.93:30900"}'
+
+
+
+
+
+
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+
+helm install grafana --namespace monitoring grafana/grafana --version 6.1.14 -f values.yml
+
+
+
+
+=================================
+
+cat << EOF | docker exec --interactive ide bash
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo add stable https://charts.helm.sh/stable
+helm repo update
+helm install prometheus --namespace monitoring --values /home/project/code/prometheus/values.yml prometheus-community/prometheus --version 13.0.0
+EOF
+
+docker exec ide bash -c "kubectl wait --for=condition=available --timeout=300 deployment/prometheus-alertmanager -n monitoring"
+docker exec ide bash -c "kubectl wait --for=condition=available --timeout=300s deployment/prometheus-kube-state-metrics -n monitoring"
+docker exec ide bash -c "kubectl wait --for=condition=available --timeout=300s deployment/prometheus-pushgateway -n monitoring"
+docker exec ide bash -c "kubectl wait --for=condition=available --timeout=300s deployment/prometheus-server -n monitoring"
+
+cat << EOF | docker exec --interactive ide bash
+kubectl patch daemonset prometheus-node-exporter -n monitoring -p '{"spec":{"template":{"metadata":{"annotations":{"prometheus.io/scrape": "true"}}}}}'
+EOF
+
+cat << EOF | docker exec --interactive ide bash
+kubectl expose deployment prometheus-server --type=NodePort --name=prometheus-main --port=30900 --target-port=9090 -n monitoring
+kubectl patch service prometheus-main -n monitoring -p '{"spec":{"ports":[{"nodePort": 30900, "port": 30900, "protocol": "TCP", "targetPort": 9090}]}}'
+export | grep K8S_CLUSTER_PUBLICIP
+EOF
+
+=================================
+
+cat << EOF | docker exec --interactive ide bash
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+helm install grafana --namespace monitoring grafana/grafana --version 6.1.14
+EOF
+
+docker exec ide bash -c "kubectl wait --for=condition=available --timeout=300s deployment/grafana -n monitoring"
+
+cat << EOF | docker exec --interactive ide bash
+kubectl expose deployment grafana --type=NodePort --name=grafana-main --port=30300 --target-port=3000 -n monitoring
+kubectl patch service grafana-main -n monitoring -p '{"spec":{"ports":[{"nodePort": 30300, "port": 30300, "protocol": "TCP", "targetPort": 3000}]}}'
+EOF
